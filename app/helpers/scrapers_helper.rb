@@ -39,4 +39,8 @@ module ScrapersHelper
   def link_url_or_escape(text)
     is_url?(text) ? auto_link_fallback(text) : escape_once(text)
   end
+
+  def language_class(scraper)
+    return "scraper-language-#{scraper.language.human.downcase}"
+  end
 end
