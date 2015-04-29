@@ -247,6 +247,22 @@ a i.fa-clock-o {
   }
 }
 
+.scraper-language-ruby {
+  background-color: lighten($ruby-lang-color, 65%);
+}
+
+.scraper-language-python {
+  background-color: lighten($python-lang-color, 40%);
+}
+
+.scraper-language-php {
+  background-color: lighten($php-lang-color, 40%);
+}
+
+.scraper-language-perl {
+  background-color: lighten($perl-lang-color, 40%);
+}
+
 h1.full_name {
   overflow: hidden;
   text-overflow: ellipsis;
