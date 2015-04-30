@@ -3,7 +3,8 @@
 = link_to scraper, class: "list-group-item" do
   %div.scraper-block
     - unless scraper.language.blank?
-      %small.scraper-lang.pull-right= scraper.language.human
+      %small.scraper-lang.pull-right
+        %span.btn.btn-xs{class: language_class(scraper)}= scraper.language.human
     %strong.full_name= highlight[:full_name] ? highlight[:full_name].html_safe : scraper.full_name
     %div
       - unless scraper.description.blank?
