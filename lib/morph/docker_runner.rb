@@ -72,7 +72,13 @@ module Morph
         'Labels' => container_labels,
         'HostConfig' => {
           # Attach this container to our special network morph
-          'NetworkMode' => DOCKER_NETWORK
+          'NetworkMode' => DOCKER_NETWORK,
+          'LogConfig' => {
+            "Type" => "gelf",
+            "Config" => {
+              "gelf-address" => "udp://localhost:12201"
+            }
+          }
         }
       }
 
@@ -116,36 +122,37 @@ module Morph
     # time is non-inclusive so we shouldn't return the log line with that
     # exact timestamp, just ones after it.
     def self.attach_to_run(container, since = nil)
-      params = { stdout: true, stderr: true, follow: true, timestamps: true }
-      params[:since] = since.to_f if since
-      container.streaming_logs(params) do |s, line|
-        timestamp = Time.parse(line[0..29])
-        # To convert this ruby time back to the same string format as it
-        # originally came in do:
-        # timestamp.utc.strftime('%Y-%m-%dT%H:%M:%S.%9NZ')
-        c = line[31..-1]
-        # We're going to assume (somewhat rashly, I might add) that the
-        # console output from the scraper is always encoded as UTF-8.
-        # TODO Fix forcing of encoding and do something more intelligent
-        # Either figure out the correct encoding or take an educated guess
-        # rather than making an assumption
-        c.force_encoding('UTF-8')
-        c.scrub!
-        # There is a chance that we catch a log line that shouldn't
-        # be included. So...
-        if since.nil? || timestamp > since
-          if s == :stderr && c == "limit_output.rb: Too many lines of output!\n"
-            yield timestamp, :internalerr,
-              "\n" \
-              'Too many lines of output! ' \
-              'Your scraper will continue uninterrupted. ' \
-              'There will just be no further output displayed' \
-              "\n"
-          else
-            yield timestamp, s, c
-          end
-        end
-      end
+      container.wait
+      # params = { stdout: true, stderr: true, follow: true, timestamps: true }
+      # params[:since] = since.to_f if since
+      # container.streaming_logs(params) do |s, line|
+      #   timestamp = Time.parse(line[0..29])
+      #   # To convert this ruby time back to the same string format as it
+      #   # originally came in do:
+      #   # timestamp.utc.strftime('%Y-%m-%dT%H:%M:%S.%9NZ')
+      #   c = line[31..-1]
+      #   # We're going to assume (somewhat rashly, I might add) that the
+      #   # console output from the scraper is always encoded as UTF-8.
+      #   # TODO Fix forcing of encoding and do something more intelligent
+      #   # Either figure out the correct encoding or take an educated guess
+      #   # rather than making an assumption
+      #   c.force_encoding('UTF-8')
+      #   c.scrub!
+      #   # There is a chance that we catch a log line that shouldn't
+      #   # be included. So...
+      #   if since.nil? || timestamp > since
+      #     if s == :stderr && c == "limit_output.rb: Too many lines of output!\n"
+      #       yield timestamp, :internalerr,
+      #         "\n" \
+      #         'Too many lines of output! ' \
+      #         'Your scraper will continue uninterrupted. ' \
+      #         'There will just be no further output displayed' \
+      #         "\n"
+      #     else
+      #       yield timestamp, s, c
+      #     end
+      #   end
+      # end
     end
 
     # This should only get called on a stopped container where all the logs
