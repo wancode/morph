@@ -19,6 +19,8 @@ logstash:
   image: docker.elastic.co/logstash/logstash-oss:6.1.1
   volumes:
     - ./docker_images/logstash/:/usr/share/logstash/pipeline/
+  ports:
+    - "12201:12201/udp"
 
 # This is a work in progress
 # TODO: Add data volume
