@@ -72,6 +72,7 @@ Rails.application.routes.draw do
   post "/run", to: "api#run_remote"
 
   resources :connection_logs, only: :create
+  resources :log_lines, only: :create
 
   resources :users, only: :index do
     # This url begins with /users so that we don't stop users have scrapers called watching
