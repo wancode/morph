@@ -23,7 +23,10 @@ class LogLinesController < ApplicationController
     #   "container_name"=>"youthful_lalande",
     #   "controller"=>"log_lines",
     #   "action"=>"create",
-    #   "log_line"=>{}
+    #   "log_line"=>{},
+    #   "io.morph.scraper"=>"mlandauer/scraper-campsites-nsw-nationalparks",
+    #   "io.morph.stage"=>"running",
+    #   "io.morph.run"=>"1177465"
     # }
   end
 end
