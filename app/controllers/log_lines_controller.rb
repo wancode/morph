@@ -2,9 +2,12 @@ class LogLinesController < ApplicationController
   skip_before_filter :verify_authenticity_token
 
   def create
-    puts "In LogLinesController#create:"
-    p params
-    render text: "Thank you\n"
+    # TODO: Add secret key to access this
+    run = Run.find(params['io.morph.run'])
+    runner = Morph::Runner.new(run)
+    # TODO: Handle different stream types
+    runner.log(params[:created], :stdout, params[:message] + "\n")
+    head :ok
     # Example of params sent here
     # {
     #   "version"=>"1.1",
