@@ -5,8 +5,8 @@ class LogLinesController < ApplicationController
     # TODO: Add secret key to access this
     run = Run.find(params['io.morph.run'])
     runner = Morph::Runner.new(run)
-    # TODO: Handle different stream types
-    runner.log(params[:created], :stdout, params[:message] + "\n")
+    stream = (params[:level] > 3) ? :stdout : :stderr
+    runner.log(params[:created], stream, params[:message] + "\n")
     head :ok
     # Example of params sent here
     # {
