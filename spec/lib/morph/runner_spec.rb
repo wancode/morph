@@ -36,58 +36,6 @@ describe Morph::Runner do
       expect(run.database.no_rows).to eq 1
     end
 
-    it 'should magically handle a sidekiq queue restart' do
-      owner = User.create(nickname: 'mlandauer')
-      run = Run.create(owner: owner)
-      FileUtils.rm_rf(run.data_path)
-      FileUtils.rm_rf(run.repo_path)
-      fill_scraper_for_run('stream_output', run)
-      logs = []
-
-      runner = Morph::Runner.new(run)
-      running_count = Morph::DockerUtils.running_containers.count
-      container_count = Morph::DockerUtils.stopped_containers.count
-      expect {runner.go_with_logging do |timestamp, s, c|
-        # Only record stdout so we can handle different results as a result
-        # of caching of the compile stage
-        logs << c if s == :stdout
-        if c.include? "2..."
-          raise Sidekiq::Shutdown
-        end
-      end}.to raise_error(Sidekiq::Shutdown)
-      run.reload
-      expect(run).to be_running
-      # We expect the container to still be running
-      expect(Morph::DockerUtils.running_containers.count)
-        .to eq (running_count + 1)
-      expect(run.database.first_ten_rows).to eq []
-
-      # Now, we simulate the queue restarting the job
-      started_at = run.started_at
-      runner.go do |timestamp, s, c|
-        logs << c
-      end
-      expect(logs.join).to eq [
-        "Started!\n",
-        "1...\n",
-        "2...\n",
-        "3...\n",
-        "4...\n",
-        "5...\n",
-        "6...\n",
-        "7...\n",
-        "8...\n",
-        "9...\n",
-        "10...\n",
-        "Finished!\n"
-      ].join
-      run.reload
-      # The start time shouldn't have changed
-      expect(run.started_at).to eq started_at
-      expect(run.database.first_ten_rows).to eq [
-        { 'state' => 'started' }, { 'state' => 'finished' }]
-    end
-
     it 'should handle restarting from a stopped container' do
       owner = User.create(nickname: 'mlandauer')
       run = Run.create(owner: owner)

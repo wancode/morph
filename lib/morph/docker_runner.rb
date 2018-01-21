@@ -124,15 +124,11 @@ module Morph
       ) unless exists
     end
 
-    # If since is non-nil only return log lines since the time given. This
-    # time is non-inclusive so we shouldn't return the log line with that
-    # exact timestamp, just ones after it.
-    def self.attach_to_run(container, since = nil, async_logs = false)
+    def self.attach_to_run(container, async_logs = false)
       if async_logs
         container.wait
       else
         params = { stdout: true, stderr: true, follow: true, timestamps: true }
-        params[:since] = since.to_f if since
         container.streaming_logs(params) do |s, line|
           timestamp = Time.parse(line[0..29])
           # To convert this ruby time back to the same string format as it
@@ -146,19 +142,15 @@ module Morph
           # rather than making an assumption
           c.force_encoding('UTF-8')
           c.scrub!
-          # There is a chance that we catch a log line that shouldn't
-          # be included. So...
-          if since.nil? || timestamp > since
-            if s == :stderr && c == "limit_output.rb: Too many lines of output!\n"
-              yield timestamp, :internalerr,
-                "\n" \
-                'Too many lines of output! ' \
-                'Your scraper will continue uninterrupted. ' \
-                'There will just be no further output displayed' \
-                "\n"
-            else
-              yield timestamp, s, c
-            end
+          if s == :stderr && c == "limit_output.rb: Too many lines of output!\n"
+            yield timestamp, :internalerr,
+              "\n" \
+              'Too many lines of output! ' \
+              'Your scraper will continue uninterrupted. ' \
+              'There will just be no further output displayed' \
+              "\n"
+          else
+            yield timestamp, s, c
           end
         end
       end

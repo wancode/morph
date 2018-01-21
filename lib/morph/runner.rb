@@ -64,19 +64,8 @@ module Morph
           # TODO: Could we get sensible timestamps out at this stage too?
           yield nil, s, c
         end
-        since = nil
-      else
-        # The timestamp of the last log line we've already captured
-        since = run.log_lines.maximum(:timestamp)
-        # We add a microsecond to compensate for rounding error as
-        # part of the time being stored in the database. The true time
-        # gets truncated to the lower microsecond. So, likely the true
-        # time happens *after* the recorded time. So, we add a microsecond
-        # to compensate for this and ensure that the "since" time occurs
-        # slightly after the true time.
-        since += 1e-6 if since
       end
-      attach_to_run_and_finish(c, since, async_logs) do |timestamp, s, c|
+      attach_to_run_and_finish(c, async_logs) do |timestamp, s, c|
         yield timestamp, s, c
       end
     end
@@ -127,12 +116,12 @@ module Morph
       c
     end
 
-    def attach_to_run_and_finish(c, since, async_logs = false)
+    def attach_to_run_and_finish(c, async_logs = false)
       if c.nil?
         # TODO: Return the status for a compile error
         result = Morph::RunResult.new(255, {}, {})
       else
-        Morph::DockerRunner.attach_to_run(c, since, async_logs) do |timestamp, s, c|
+        Morph::DockerRunner.attach_to_run(c, async_logs) do |timestamp, s, c|
           yield(timestamp, s, c)
         end
         result = Morph::DockerRunner.finish(c, ['data.sqlite'])

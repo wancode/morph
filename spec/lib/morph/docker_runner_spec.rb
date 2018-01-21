@@ -242,36 +242,12 @@ describe Morph::DockerRunner do
       expect(end_time - start_time).to be_within(0.1).of(1.0)
     end
 
-    it 'should be able to reconnect to a running container' do
-      copy_test_scraper('stream_output_ruby')
-
-      logs = []
-      # TODO Really should be able to call compile_and_start_run without a block
-      c = Morph::DockerRunner.compile_and_start_run(@dir, {}, {}) {}
-      # Simulate the log process stopping
-      last_timestamp = nil
-      expect {Morph::DockerRunner.attach_to_run(c) do |timestamp, s, c|
-        last_timestamp = timestamp
-        logs << c
-        if c == "2...\n"
-          raise Sidekiq::Shutdown
-        end
-      end}.to raise_error Sidekiq::Shutdown
-      expect(logs).to eq ["Started!\n", "1...\n", "2...\n"]
-      # Now restart the log process using the timestamp of the last log entry
-      Morph::DockerRunner.attach_to_run(c, last_timestamp) do |timestamp, s, c|
-        logs << c
-      end
-      Morph::DockerRunner.finish(c, [])
-      expect(logs).to eq ["Started!\n", "1...\n", "2...\n", "3...\n", "4...\n", "5...\n", "6...\n", "7...\n", "8...\n", "9...\n", "10...\n", "Finished!\n"]
-    end
-
     it 'should be able to limit the amount of log output' do
       copy_test_scraper('stream_output_ruby')
 
       c = Morph::DockerRunner.compile_and_start_run(@dir, {}, {}, 5) {}
       logs = []
-      Morph::DockerRunner.attach_to_run(c, nil) do |timestamp, s, c|
+      Morph::DockerRunner.attach_to_run(c) do |timestamp, s, c|
         logs << [s, c]
       end
       Morph::DockerRunner.finish(c, [])
