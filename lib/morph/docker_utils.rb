@@ -48,8 +48,10 @@ module Morph
       Docker::Image.get(name)
     rescue Docker::Error::NotFoundError
       Docker::Image.create('fromImage' => name) do |chunk|
-        data = JSON.parse(chunk)
-        yield "#{data['status']} #{data['id']} #{data['progress']}\n"
+        chunk.split("\n").each do |c|
+          data = JSON.parse(c)
+          puts "#{data['status']} #{data['id']} #{data['progress']}\n"
+        end
       end
     end
 
@@ -143,14 +145,26 @@ module Morph
       # How does this connection get closed?
       connection = docker_connection(connection_options)
       temp = create_tar_file(dir)
+      buffer = ""
       Docker::Image.build_from_tar(
         temp, build_options.merge('forcerm' => 1), connection
       ) do |chunk|
         # Sometimes a chunk contains multiple lines of json
         chunk.split("\n").each do |line|
           parsed_line = JSON.parse(line)
-          yield parsed_line['stream'] if parsed_line.key?('stream')
+          if parsed_line.key?('stream')
+            buffer << parsed_line['stream']
+            # Buffer output until an end-of-line is detected. This
+            # makes line output more consistent across platforms.
+            # Make sure that buffer can't grow out of control by limiting
+            # it's size around 256 bytes
+            if buffer[-1..-1] == "\n" || buffer.length >= 256
+              yield buffer
+              buffer = ""
+            end
+          end
         end
+        yield buffer if buffer != ""
       end
     # This exception gets thrown if there is an error during the build (for
     # example if the compile fails). In this case we just want to return nil
