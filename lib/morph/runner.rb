@@ -28,6 +28,7 @@ module Morph
     end
 
     # The main section of the scraper running that is run in the background
+    # This always does logs asynchronously
     def synch_and_go!
       # If this run belongs to a scraper that has just been deleted
       # or if the run has already been marked as finished then
@@ -35,11 +36,11 @@ module Morph
       return if run.scraper.nil? || run.finished?
 
       run.scraper.synchronise_repo
-      go_with_logging
+      go_with_logging(Runner.default_max_lines, true)
     end
 
-    def go_with_logging(max_lines = Runner.default_max_lines)
-      go(max_lines) do |timestamp, s, c|
+    def go_with_logging(max_lines = Runner.default_max_lines, async_logs = false)
+      go(max_lines, async_logs) do |timestamp, s, c|
         log(timestamp, s, c)
         yield timestamp, s, c if block_given?
       end
@@ -55,11 +56,11 @@ module Morph
       sync_new line, scope: run unless Rails.env.test?
     end
 
-    def go(max_lines = Runner.default_max_lines)
+    def go(max_lines = Runner.default_max_lines, async_logs = false)
       # If container already exists we just attach to it
       c = container_for_run
       if c.nil?
-        c = compile_and_start_run(max_lines) do |s, c|
+        c = compile_and_start_run(max_lines, async_logs) do |s, c|
           # TODO: Could we get sensible timestamps out at this stage too?
           yield nil, s, c
         end
@@ -75,12 +76,12 @@ module Morph
         # slightly after the true time.
         since += 1e-6 if since
       end
-      attach_to_run_and_finish(c, since) do |timestamp, s, c|
+      attach_to_run_and_finish(c, since, async_logs) do |timestamp, s, c|
         yield timestamp, s, c
       end
     end
 
-    def compile_and_start_run(max_lines = Runner.default_max_lines)
+    def compile_and_start_run(max_lines = Runner.default_max_lines, async_logs = false)
       # puts "Starting...\n"
       run.database.backup
       run.update_attributes(started_at: Time.now,
@@ -106,7 +107,7 @@ module Morph
         Morph::Runner.add_sqlite_db_to_directory(run.data_path, defaults)
 
         Morph::DockerRunner.compile_and_start_run(
-          defaults, run.env_variables, docker_container_labels, max_lines
+          defaults, run.env_variables, docker_container_labels, max_lines, async_logs
         ) do |s, c|
           yield(s, c)
         end
@@ -126,12 +127,12 @@ module Morph
       c
     end
 
-    def attach_to_run_and_finish(c, since)
+    def attach_to_run_and_finish(c, since, async_logs = false)
       if c.nil?
         # TODO: Return the status for a compile error
         result = Morph::RunResult.new(255, {}, {})
       else
-        Morph::DockerRunner.attach_to_run(c, since) do |timestamp, s, c|
+        Morph::DockerRunner.attach_to_run(c, since, async_logs) do |timestamp, s, c|
           yield(timestamp, s, c)
         end
         result = Morph::DockerRunner.finish(c, ['data.sqlite'])
