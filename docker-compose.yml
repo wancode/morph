@@ -19,6 +19,8 @@ services:
 
   logstash:
     image: docker.elastic.co/logstash/logstash-oss:6.1.1
+    depends_on:
+      - redis
     volumes:
       - ./docker_images/logstash/:/usr/share/logstash/pipeline
     ports:
