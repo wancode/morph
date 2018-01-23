@@ -1,50 +1,52 @@
-# This is a work in progress
-# web:
-#   build: .
-#   command: bundle exec rails s -p 3000 -b '0.0.0.0'
-#   volumes:
-#     - .:/morph
-#   ports:
-#     - "3000:3000"
-#   links:
-#     - db
+version: '3'
+services:
+  # This is a work in progress
+  # web:
+  #   build: .
+  #   command: bundle exec rails s -p 3000 -b '0.0.0.0'
+  #   volumes:
+  #     - .:/morph
+  #   ports:
+  #     - "3000:3000"
+  #   links:
+  #     - db
 
-# TODO: Add data volume
-elasticsearch:
-  image: elasticsearch:1.6.0
-  ports:
-    - "9200:9200"
+  # TODO: Add data volume
+  elasticsearch:
+    image: elasticsearch:1.6.0
+    ports:
+      - "9200:9200"
 
-logstash:
-  image: docker.elastic.co/logstash/logstash-oss:6.1.1
-  volumes:
-    - ./docker_images/logstash/:/usr/share/logstash/pipeline/
-  ports:
-    - "12201:12201/udp"
+  logstash:
+    image: docker.elastic.co/logstash/logstash-oss:6.1.1
+    volumes:
+      - ./docker_images/logstash/:/usr/share/logstash/pipeline
+    ports:
+      - "12201:12201/udp"
 
-redis:
-  image: redis:4.0.6
-  # Also expose redis to the host (at port 6380 so it doesn't
-  # clash with redis installed on the host)
-  # TODO: No need to have redis on the host
-  ports:
-    - "6380:6379"
+  redis:
+    image: redis:4.0.6
+    # Also expose redis to the host (at port 6380 so it doesn't
+    # clash with redis installed on the host)
+    # TODO: No need to have redis on the host
+    ports:
+      - "6380:6379"
 
-# This is a work in progress
-# TODO: Add data volume
-# TODO: Use a specific version of mysql
-# db:
-#   image: mysql
-#   ports:
-#     - "3306"
-#   environment:
-#     MYSQL_ROOT_PASSWORD: abc123
+  # This is a work in progress
+  # TODO: Add data volume
+  # TODO: Use a specific version of mysql
+  # db:
+  #   image: mysql
+  #   ports:
+  #     - "3306"
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: abc123
 
-# This is a work in progress
-# proxy:
-#   build: docker_images/morph-mitmdump
-#   links:
-#     - web
-#   environment:
-#     MORPH_URL: http://web:3000
-#     MITMPROXY_SECRET: afisdifubekfnasi
+  # This is a work in progress
+  # proxy:
+  #   build: docker_images/morph-mitmdump
+  #   links:
+  #     - web
+  #   environment:
+  #     MORPH_URL: http://web:3000
+  #     MITMPROXY_SECRET: afisdifubekfnasi
