@@ -22,6 +22,14 @@ logstash:
   ports:
     - "12201:12201/udp"
 
+redis:
+  image: redis:4.0.6
+  # Also expose redis to the host (at port 6380 so it doesn't
+  # clash with redis installed on the host)
+  # TODO: No need to have redis on the host
+  ports:
+    - "6380:6379"
+
 # This is a work in progress
 # TODO: Add data volume
 # TODO: Use a specific version of mysql
