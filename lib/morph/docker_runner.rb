@@ -59,19 +59,6 @@ module Morph
       # Add another label to the created container
       container_labels['io.morph.stage'] = 'running'
 
-      host_config = {
-        # Attach this container to our special network morph
-        'NetworkMode' => DOCKER_NETWORK
-      }
-
-      host_config['LogConfig'] = {
-        "Type" => "gelf",
-        "Config" => {
-          "gelf-address" => "udp://localhost:12201",
-          "labels" => container_labels.keys.join(',')
-        }
-      }
-
       container_options = {
         'Cmd' => command,
         'Image' => i3.id,
@@ -83,7 +70,17 @@ module Morph
             'REQUESTS_CA_BUNDLE' => '/etc/ssl/certs/ca-certificates.crt'
           }.merge(env_variables).map { |k, v| "#{k}=#{v}" },
         'Labels' => container_labels,
-        'HostConfig' => host_config
+        'HostConfig' => {
+          # Attach this container to our special network morph
+          'NetworkMode' => DOCKER_NETWORK,
+          'LogConfig' => {
+            "Type" => "gelf",
+            "Config" => {
+              "gelf-address" => "udp://localhost:12201",
+              "labels" => container_labels.keys.join(',')
+            }
+          }
+        }
       }
 
       c = Docker::Container.create(container_options)
