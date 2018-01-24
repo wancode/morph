@@ -32,7 +32,7 @@ module Morph
     end
 
     def self.compile_and_start_run(
-      repo_path, env_variables, container_labels, max_lines = 0, async_logs = false
+      repo_path, env_variables, container_labels, max_lines = 0
     )
       i = buildstep_image do |c|
         yield(:internalout, c)
@@ -64,15 +64,13 @@ module Morph
         'NetworkMode' => DOCKER_NETWORK
       }
 
-      if async_logs
-        host_config['LogConfig'] = {
-          "Type" => "gelf",
-          "Config" => {
-            "gelf-address" => "udp://localhost:12201",
-            "labels" => container_labels.keys.join(',')
-          }
+      host_config['LogConfig'] = {
+        "Type" => "gelf",
+        "Config" => {
+          "gelf-address" => "udp://localhost:12201",
+          "labels" => container_labels.keys.join(',')
         }
-      end
+      }
 
       container_options = {
         'Cmd' => command,
@@ -124,36 +122,43 @@ module Morph
       ) unless exists
     end
 
-    def self.attach_to_run(container, async_logs = false)
-      if async_logs
+    def self.attach_to_run(container)
+      channel = "container_id:#{container.id}"
+      # puts "Subscribing to channel #{channel}"
+      # We're using the redis running on the container which is bound to a
+      # non-standard port on the main host
+      redis = Redis.new(port: 6380)
+
+      t = Thread.new do
         container.wait
-      else
-        params = { stdout: true, stderr: true, follow: true, timestamps: true }
-        container.streaming_logs(params) do |s, line|
-          timestamp = Time.parse(line[0..29])
-          # To convert this ruby time back to the same string format as it
-          # originally came in do:
-          # timestamp.utc.strftime('%Y-%m-%dT%H:%M:%S.%9NZ')
-          c = line[31..-1]
-          # We're going to assume (somewhat rashly, I might add) that the
-          # console output from the scraper is always encoded as UTF-8.
-          # TODO Fix forcing of encoding and do something more intelligent
-          # Either figure out the correct encoding or take an educated guess
-          # rather than making an assumption
-          c.force_encoding('UTF-8')
-          c.scrub!
-          if s == :stderr && c == "limit_output.rb: Too many lines of output!\n"
-            yield timestamp, :internalerr,
-              "\n" \
-              'Too many lines of output! ' \
-              'Your scraper will continue uninterrupted. ' \
-              'There will just be no further output displayed' \
-              "\n"
+        # TODO: Format this as an event that says "scraper finished"
+        Redis.new(port: 6380).publish(channel, "finished")
+      end
+      redis.subscribe(channel) do |on|
+        on.message do |channel, message|
+          # puts "##{channel}: #{message}"
+          if message == "finished"
+            redis.unsubscribe(channel)
           else
-            yield timestamp, s, c
+            d = JSON.parse(message)
+            # timestamp = Time.parse(d['created'])
+            timestamp = Time.parse(d['@timestamp'])
+            s = (d['level'] > 3) ? :stdout : :stderr
+            c = d['message'] + "\n"
+            if s == :stderr && c == "limit_output.rb: Too many lines of output!\n"
+              yield timestamp, :internalerr,
+                "\n" \
+                'Too many lines of output! ' \
+                'Your scraper will continue uninterrupted. ' \
+                'There will just be no further output displayed' \
+                "\n"
+            else
+              yield timestamp, s, c
+            end
           end
         end
       end
+      t.join
     end
 
     # This should only get called on a stopped container where all the logs
