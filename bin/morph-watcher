@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+# First little prototype of a process to watch the docker events stream
+# and report back to redis
+
+require 'docker'
+
+# TODO: Make sure that only one of these processes is ever running at a time
+# TODO: Handle docker events that have happened while this might not have been running
+
+puts "Welcome to the morph.io watcher. I help manage the lifecycle of docker containers."
+
+# This will currently timeout if longer than 60 seconds between docker events
+# TODO: Ensure that we retry and/or have a longer timeout
+Docker::Event.stream do |event|
+  puts event
+end
