@@ -39,13 +39,6 @@ module Morph
       go_with_logging
     end
 
-    def go_with_logging(max_lines = Runner.default_max_lines)
-      go(max_lines) do |timestamp, s, c|
-        log(timestamp, s, c)
-        yield timestamp, s, c if block_given?
-      end
-    end
-
     def log(timestamp, stream, text)
       puts "#{stream}: #{text}" if Rails.env.development?
       # Not using create on association to try to avoid memory bloat
@@ -54,6 +47,21 @@ module Morph
       # particularly careful with unicode.
       line = LogLine.create!(run: run, timestamp: timestamp, stream: stream.to_s, text: text.mb_chars.limit(65535).to_s)
       sync_new line, scope: run unless Rails.env.test?
+    end
+
+    def go_with_logging(max_lines = Runner.default_max_lines)
+      # If container already exists we just attach to it
+      c = container_for_run
+      if c.nil?
+        c = compile_and_start_run(max_lines) do |s, c|
+          log(nil, s, c)
+          # TODO: Could we get sensible timestamps out at this stage too?
+          yield nil, s, c if block_given?
+        end
+      end
+      attach_to_run_and_finish(c) do |timestamp, s, c|
+        yield timestamp, s, c if block_given?
+      end
     end
 
     def go(max_lines = Runner.default_max_lines)
