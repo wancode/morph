@@ -13,7 +13,13 @@ class RunWorker
     if run
       runner = Morph::Runner.new(run)
       if Morph::Runner.available_slots > 0 || runner.container_for_run
-        runner.synch_and_go!
+        # If this run belongs to a scraper that has just been deleted
+        # or if the run has already been marked as finished then
+        # don't do anything
+        if run.scraper && !run.finished?
+          run.scraper.synchronise_repo
+          runner.go_with_logging
+        end
       else
         # TODO: Don't throw this error if the container for this run already exists
         raise NoRemainingSlotsError

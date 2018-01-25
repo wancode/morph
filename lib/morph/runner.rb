@@ -27,18 +27,6 @@ module Morph
       total_slots - used_slots
     end
 
-    # The main section of the scraper running that is run in the background
-    # This always does logs asynchronously
-    def synch_and_go!
-      # If this run belongs to a scraper that has just been deleted
-      # or if the run has already been marked as finished then
-      # don't do anything
-      return if run.scraper.nil? || run.finished?
-
-      run.scraper.synchronise_repo
-      go_with_logging
-    end
-
     def log(timestamp, stream, text)
       puts "#{stream}: #{text}" if Rails.env.development?
       # Not using create on association to try to avoid memory bloat
