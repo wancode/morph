@@ -89,7 +89,7 @@ describe Morph::Runner do
       fill_scraper_for_run('stream_output', run)
       logs = []
       runner = Morph::Runner.new(run)
-      runner.go_with_logging(5) do |timestamp, s, c|
+      runner.go(5) do |timestamp, s, c|
         # Only record stdout so we can handle different results as a result
         # of caching of the compile stage
         logs << [s, c]
@@ -115,7 +115,7 @@ describe Morph::Runner do
     #   FileUtils.rm_rf(run.repo_path)
     #   fill_scraper_for_run('save_to_database', run)
     #   runner = Morph::Runner.new(run)
-    #   runner.go_with_logging {}
+    #   runner.go {}
     #   run.reload
     #   subnet = run.ip_address.split('.')[0..1].join('.')
     #   expect(subnet).to eq "192.168"
@@ -129,7 +129,7 @@ describe Morph::Runner do
       fill_scraper_for_run('stream_output', run)
       logs = []
       runner = Morph::Runner.new(run)
-      expect {runner.go_with_logging(5) do |timestamp, s, c|
+      expect {runner.go(5) do |timestamp, s, c|
         # Only record stdout so we can handle different results as a result
         # of caching of the compile stage
         logs << [s, c]
@@ -142,7 +142,7 @@ describe Morph::Runner do
         [:stdout, "1...\n"],
         [:stdout, "2...\n"]
       ]
-      runner.go_with_logging(5) do |timestamp, s, c|
+      runner.go(5) do |timestamp, s, c|
         logs << [s, c]
       end
       expect(logs[-6..-1]).to eq [
