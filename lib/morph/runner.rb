@@ -54,14 +54,11 @@ module Morph
       c = container_for_run
       if c.nil?
         c = compile_and_start_run(max_lines) do |s, c|
-          log(nil, s, c)
           # TODO: Could we get sensible timestamps out at this stage too?
-          yield nil, s, c if block_given?
+          log(nil, s, c)
         end
       end
-      attach_to_run_and_finish(c) do |timestamp, s, c|
-        yield timestamp, s, c if block_given?
-      end
+      attach_to_run_and_finish(c)
     end
 
     def go(max_lines = Runner.default_max_lines)
