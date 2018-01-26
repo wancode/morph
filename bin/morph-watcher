@@ -3,14 +3,29 @@
 # and report back to redis
 
 require 'docker'
+require 'redis'
 
 # TODO: Make sure that only one of these processes is ever running at a time
 # TODO: Handle docker events that have happened while this might not have been running
 
 puts "Welcome to the morph.io watcher. I help manage the lifecycle of docker containers."
 
+# We're using the redis running on the container which is bound to a
+# non-standard port on the main host
+redis = Redis.new(port: 6380)
+
 # This will currently timeout if longer than 60 seconds between docker events
 # TODO: Ensure that we retry and/or have a longer timeout
 Docker::Event.stream do |event|
-  puts event
+  # puts event
+  if event.action == 'die' &&
+     event.type == 'container' &&
+     event.actor.attributes['io.morph.stage'] == 'running'
+
+    # TODO: Format this as an event that says "scraper finished"
+    redis.publish("container_id:#{event.id}", 'finished')
+    puts "Notified redis channel of stopped container: #{event.id}"
+  end
 end
+
+# TODO: Handle tidy shutdown (ctrl c and others)
