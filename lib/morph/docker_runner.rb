@@ -155,7 +155,6 @@ module Morph
           end
         end
       end
-      t.join
     end
 
     # This should only get called on a stopped container where all the logs
