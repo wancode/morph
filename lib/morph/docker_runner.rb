@@ -76,7 +76,7 @@ module Morph
           'LogConfig' => {
             "Type" => "gelf",
             "Config" => {
-              "gelf-address" => "udp://localhost:12201",
+              "gelf-address" => "tcp://localhost:12201",
               "labels" => container_labels.keys.join(',')
             }
           }

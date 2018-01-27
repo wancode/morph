@@ -18,13 +18,13 @@ services:
       - "9200:9200"
 
   logstash:
-    image: docker.elastic.co/logstash/logstash-oss:6.1.1
+    build: ./docker_images/logstash-build
     depends_on:
       - redis
     volumes:
       - ./docker_images/logstash/:/usr/share/logstash/pipeline
     ports:
-      - "12201:12201/udp"
+      - "12201:12201"
 
   redis:
     image: redis:4.0.6
